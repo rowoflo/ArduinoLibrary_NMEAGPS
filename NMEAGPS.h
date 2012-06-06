@@ -78,6 +78,7 @@ public:
     // Constructors
     NMEAGPS();
     NMEAGPS(int rxPin, int txPin);
+    NMEAGPS(const SoftwareSerial &gpsSerial);
     
     // Destructor
     virtual ~NMEAGPS();
@@ -152,7 +153,7 @@ private:
     // GPS Data
     float _time; // UTC Time
     float _lat; // Latitude in deg min sec
-    
+    float _lon; // Latitude in deg min sec
 };
 
 #endif

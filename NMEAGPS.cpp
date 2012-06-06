@@ -39,10 +39,10 @@ NMEAGPS::NMEAGPS(int rxPin, int txPin) {
     initialize();
 }
 
-//NMEAGPS::NMEAGPS(SoftwareSerial &gpsSerial) {
-//    _gpsSerial = gpsSerial;
-//}
-
+NMEAGPS::NMEAGPS(const SoftwareSerial &gpsSerial) {
+    _gpsSerial = gpsSerial;
+    _gpsSerial.listen();
+}
 
 // Destructor
 NMEAGPS::~NMEAGPS() {
@@ -103,12 +103,18 @@ void NMEAGPS::initialize() {
 
 void  NMEAGPS::readGPSStream() {
     if (_gpsSerial.overflow()) {
+        Serial.println("Overflow!");
         _buffer = "";
     }
     
+//    char incomingByte;
 	while (_gpsSerial.available()) {
+//        incomingByte = _gpsSerial.read();
+//        Serial.print(incomingByte);
+
         _buffer += (char)_gpsSerial.read();
     }
+//    Serial.println(_buffer);
 }
 
 void NMEAGPS::parseBuffer() {
@@ -163,14 +169,17 @@ void NMEAGPS::parseMsg(String &msg, String msgParts[], int nParts) {
 }
 
 int NMEAGPS::stoi(const String &str) {
-    char charBuffer[str.length()];
-    str.toCharArray(charBuffer, str.length());
+    char charBuffer[str.length()+1];
+    str.toCharArray(charBuffer, str.length()+1);
     return (atoi(charBuffer));
 }
 
 float NMEAGPS::stof(const String &str) {
-    char charBuffer[str.length()];
-    str.toCharArray(charBuffer, str.length());
+    char charBuffer[str.length()+1];
+    str.toCharArray(charBuffer, str.length()+1);
+    Serial.println("STOF");
+    Serial.println(charBuffer);
+    Serial.println(atof(charBuffer));
     return (atof(charBuffer));
 }
 
@@ -193,14 +202,35 @@ void NMEAGPS::parseGPGGA(String &msg) {
     parseMsg(msg, msgParts, 13);
     
     _time = stof(msgParts[0]);
-    _lat = stof(msgParts[1]);
+    
+    int latD = stoi(msgParts[1].substring(0,2));
+    float latM = stof(msgParts[1].substring(2));
+    Serial.println(msgParts[1].substring(0,2));
+    Serial.println(latD);
+    Serial.println(msgParts[1].substring(2));
+    Serial.println(latM);
+    _lat = latD + latM/60;
+    
+    int lonD = stoi(msgParts[3].substring(0,3));
+    float lonM = stof(msgParts[3].substring(3));
+    Serial.println(msgParts[3].substring(0,3));
+    Serial.println(lonD);
+    Serial.println(msgParts[3].substring(3));
+    Serial.println(lonM);
+    _lon = lonD + lonM/60;
     
     Serial.println("Time");
     Serial.println(msgParts[0]);
     Serial.println(_time,3);
+    
     Serial.println("Lat");
     Serial.println(msgParts[1]);
     Serial.println(_lat,4);
+    
+    Serial.println("Lon");
+    Serial.println(msgParts[3]);
+    Serial.println(_lon,4);
+    
 }
 
 
