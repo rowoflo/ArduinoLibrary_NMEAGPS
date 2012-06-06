@@ -51,7 +51,8 @@
 //------------------------------------------------------------------------------
 // Includes
 //------------------------------------------------------------------------------
-
+#include <Arduino.h>
+#include <SoftwareSerial.h>
 
 
 class NMEAGPS {
@@ -76,6 +77,7 @@ public:
     //--------------------------------------------------------------------------
     // Constructors
     NMEAGPS();
+    NMEAGPS(int rxPin, int txPin);
     
     // Destructor
     virtual ~NMEAGPS();
@@ -95,7 +97,7 @@ public:
     //--------------------------------------------------------------------------
     // Public Member Functions
     //--------------------------------------------------------------------------
-    
+    void update();
     
     //--------------------------------------------------------------------------
     // Public Member Variables
@@ -129,13 +131,27 @@ private:
     //--------------------------------------------------------------------------
     // Private Member Functions
     //--------------------------------------------------------------------------
-    
+    void initialize();
+    void readGPSStream();
+    void parseBuffer();
+    void parseMsg(String &msg, String msgParts[], int nParts);
+    int stoi(const String &str);
+    float stof(const String &str);
+    void parseGPGGA(String &msg);
     
     //--------------------------------------------------------------------------
     // Private Member Variables
     //--------------------------------------------------------------------------
+    int _rxPin; // Receive pin
+    int _txPin; // Transmit pin
+    static const int _baud = 4800; // BAUD rate
     
+    SoftwareSerial _gpsSerial; // Softserial object for GPS 
+    String _buffer; // Receive data buffer
     
+    // GPS Data
+    float _time; // UTC Time
+    float _lat; // Latitude in deg min sec
     
 };
 
