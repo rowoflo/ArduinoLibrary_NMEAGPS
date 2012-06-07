@@ -83,6 +83,9 @@ void NMEAGPS::copyHelper(const NMEAGPS& srcObj) {
 // Public Member Functions
 //------------------------------------------------------------------------------
 void NMEAGPS::update() {
+    if (~_gpsSerial.isListening()) {
+        _gpsSerial.listen();
+    }
     readGPSStream();
     parseBuffer();
 }
@@ -132,20 +135,20 @@ void NMEAGPS::parseBuffer() {
     String msgID;
     String msg;
     
-    while (_buffer.length() > 1) {
+    while (_buffer.length() > 1) { // Check if start of message is there
         msgStartInd = _buffer.indexOf('$');
         if (msgStartInd == -1) {
             _buffer = "";
             break;
         }        
         
-        msgEndInd = _buffer.indexOf('\n',msgStartInd);
+        msgEndInd = _buffer.indexOf('\n',msgStartInd); // Check if end of message is there
         if (msgEndInd == -1) {
             break;
         }
         
         dollarInd = _buffer.indexOf('$',msgStartInd);
-        if (dollarInd != -1 && dollarInd < msgEndInd) {
+        if (dollarInd != -1 && dollarInd < msgEndInd) { // Check message has no other $ signs
             _buffer = _buffer.substring(dollarInd);
             msgStartInd = 0;
             msgEndInd = msgEndInd - dollarInd;
@@ -166,6 +169,11 @@ void NMEAGPS::parseBuffer() {
         
         // Trim off found message
         _buffer = _buffer.substring(msgEndInd+1);
+        
+        _overflow = false;
+    }
+    if (_buffer.indexOf('$') == -1) {
+        _buffer = "";
     }
 }
 

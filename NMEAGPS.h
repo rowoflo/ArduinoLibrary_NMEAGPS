@@ -101,6 +101,7 @@ public:
     void update();
     
     // Getters
+    bool overflow() {return _overflow;};
     int hour() {return _hour;}
     int minute() {return _min;}
     float second() {return _sec;}
