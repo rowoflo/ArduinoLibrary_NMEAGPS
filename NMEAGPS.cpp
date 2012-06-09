@@ -28,15 +28,13 @@
 // Lifecycle
 //------------------------------------------------------------------------------
 // Constructors
-NMEAGPS::NMEAGPS()
-:
-_rxPin(2),
-_txPin(3) {
-    NMEAGPS(_rxPin, _txPin);
+NMEAGPS::NMEAGPS() {
+    NMEAGPS(2, 3);
 }
 
 NMEAGPS::NMEAGPS(int rxPin, int txPin) {
-    initialize();
+    _rxPin = rxPin;
+    _txPin = txPin;
 }
 
 NMEAGPS::NMEAGPS(const SoftwareSerial &gpsSerial) {
@@ -82,24 +80,8 @@ void NMEAGPS::copyHelper(const NMEAGPS& srcObj) {
 //------------------------------------------------------------------------------
 // Public Member Functions
 //------------------------------------------------------------------------------
-void NMEAGPS::update() {
-    if (~_gpsSerial.isListening()) {
-        _gpsSerial.listen();
-    }
-    readGPSStream();
-    parseBuffer();
-}
-
-//------------------------------------------------------------------------------
-// Protected Member Functions
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-// Private Member Functions
-//------------------------------------------------------------------------------
 void NMEAGPS::initialize() {
-    _gpsSerial = SoftwareSerial(2, 3);
+    _gpsSerial = SoftwareSerial(_rxPin, _txPin);
     _gpsSerial.begin(_baud);
     _gpsSerial.listen();
     
@@ -120,11 +102,36 @@ void NMEAGPS::initialize() {
     _VDOP = 0; 
 }
 
+void NMEAGPS::update() {
+    if (~_gpsSerial.isListening()) {
+        _gpsSerial.listen();
+    }
+    readGPSStream();
+    parseBuffer();
+}
+
+bool NMEAGPS::isListening() {
+    return (_gpsSerial.isListening());
+}
+
+void NMEAGPS::listen() {
+    _gpsSerial.listen();
+}
+
+//------------------------------------------------------------------------------
+// Protected Member Functions
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+// Private Member Functions
+//------------------------------------------------------------------------------
 void  NMEAGPS::readGPSStream() {
     if (_gpsSerial.overflow()) {
         _overflow = true;
         _buffer = "";
     }
+    
 	while (_gpsSerial.available()) {
         _buffer += (char)_gpsSerial.read();
     }

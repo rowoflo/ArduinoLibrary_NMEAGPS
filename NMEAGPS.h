@@ -98,7 +98,10 @@ public:
     //--------------------------------------------------------------------------
     // Public Member Functions
     //--------------------------------------------------------------------------
+    void initialize();
     void update();
+    bool isListening();
+    void listen();
     
     // Getters
     bool overflow() {return _overflow;};
@@ -134,7 +137,6 @@ private:
     //--------------------------------------------------------------------------
     // Private Member Functions
     //--------------------------------------------------------------------------
-    void initialize();
     void readGPSStream();
     void parseBuffer();
     void parseMsg(String &msg, String msgParts[], int nParts);
