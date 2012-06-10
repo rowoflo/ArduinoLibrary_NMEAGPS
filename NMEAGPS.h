@@ -99,12 +99,14 @@ public:
     // Public Member Functions
     //--------------------------------------------------------------------------
     void initialize();
-    void update();
+    bool update();
     bool isListening();
     void listen();
+    int available();
+    bool overflow();
     
     // Getters
-    bool overflow() {return _overflow;};
+    bool valid() {return _valid;};
     int hour() {return _hour;}
     int minute() {return _min;}
     float second() {return _sec;}
@@ -121,8 +123,6 @@ public:
     float HDOP() {return _HDOP;}
     float VDOP() {return _VDOP;}
     
-    
-    
 private:
     //--------------------------------------------------------------------------
     // Constants, Enums, and Types
@@ -137,14 +137,14 @@ private:
     //--------------------------------------------------------------------------
     // Private Member Functions
     //--------------------------------------------------------------------------
-    void readGPSStream();
+    bool readGPSStream();
     void parseBuffer();
-    void parseMsg(String &msg, String msgParts[], int nParts);
+    bool parseMsg(String &msg, String msgParts[], int nParts);
     int stoi(const String &str);
     float stof(const String &str);
     void parseGPGGA(String &msg);
-    void parseGPGSA(String &msg);
-    void parseGPGSV(String &msg);
+    // void parseGPGSA(String &msg); // Still need to implement
+    // void parseGPGSV(String &msg); // Still need to implement
     void parseGPRMC(String &msg);
     
     //--------------------------------------------------------------------------
@@ -157,7 +157,7 @@ private:
     SoftwareSerial _gpsSerial; // Softserial object for GPS 
     String _buffer; // Receive data buffer
     
-    bool _overflow; // Overflow flag
+    bool _valid; // Valid message flag
     
     // GPS Data
     int _year;

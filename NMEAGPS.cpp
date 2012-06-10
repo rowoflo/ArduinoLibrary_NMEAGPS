@@ -69,7 +69,26 @@ const NMEAGPS& NMEAGPS::operator=(const NMEAGPS& rhsObj) {
 
 // Copy helper function
 void NMEAGPS::copyHelper(const NMEAGPS& srcObj) {
-    
+    _txPin = srcObj._txPin;
+    _rxPin = srcObj._rxPin;
+    _gpsSerial = srcObj._gpsSerial;
+    _buffer = srcObj._buffer;
+    _valid = srcObj._valid;
+    _hour = srcObj._hour;
+    _min = srcObj._min;
+    _sec = srcObj._sec;
+    _lat = srcObj._lat;
+    _lon = srcObj._lon;
+    _alt = srcObj._alt;
+    _altUnits = srcObj._altUnits;
+    _geoid = srcObj._geoid;
+    _geoidUnits = srcObj._geoidUnits;
+    _nSats = srcObj._nSats;
+    _PDOP = srcObj._PDOP;
+    _HDOP = srcObj._HDOP;
+    _VDOP = srcObj._VDOP;
+    _status = srcObj._status;
+    _mode = srcObj._mode;
 }
 
 //------------------------------------------------------------------------------
@@ -85,8 +104,8 @@ void NMEAGPS::initialize() {
     _gpsSerial.begin(_baud);
     _gpsSerial.listen();
     
-    // Initialize private variables with getters
-    _overflow = false;
+    // Initialize private variables
+    _valid = false;
     _hour = 0;
     _min = 0;
     _sec = 0;
@@ -102,20 +121,32 @@ void NMEAGPS::initialize() {
     _VDOP = 0; 
 }
 
-void NMEAGPS::update() {
-    if (~_gpsSerial.isListening()) {
-        _gpsSerial.listen();
+bool NMEAGPS::update() {
+    bool updated;
+        
+    if (readGPSStream()) {       
+        parseBuffer();
+        updated = true;
+    } else {        
+        updated = false;
     }
-    readGPSStream();
-    parseBuffer();
+    return updated;    
 }
 
 bool NMEAGPS::isListening() {
-    return (_gpsSerial.isListening());
+    return _gpsSerial.isListening();
 }
 
 void NMEAGPS::listen() {
     _gpsSerial.listen();
+}
+
+int NMEAGPS::available() {
+    return _gpsSerial.available();
+}
+
+bool NMEAGPS::overflow() {
+    return _gpsSerial.overflow();
 }
 
 //------------------------------------------------------------------------------
@@ -126,18 +157,17 @@ void NMEAGPS::listen() {
 //------------------------------------------------------------------------------
 // Private Member Functions
 //------------------------------------------------------------------------------
-void  NMEAGPS::readGPSStream() {
-    if (_gpsSerial.overflow()) {
-        _overflow = true;
-        _buffer = "";
+bool NMEAGPS::readGPSStream() {    
+    if (!_gpsSerial.available()) {
+        return false;
     }
-    
 	while (_gpsSerial.available()) {
         _buffer += (char)_gpsSerial.read();
     }
+    return true;
 }
 
-void NMEAGPS::parseBuffer() {
+void NMEAGPS::parseBuffer() {    
     int msgStartInd, msgEndInd, dollarInd;
     String msgID;
     String msg;
@@ -146,15 +176,15 @@ void NMEAGPS::parseBuffer() {
         msgStartInd = _buffer.indexOf('$');
         if (msgStartInd == -1) {
             _buffer = "";
-            break;
+            return;
         }        
         
-        msgEndInd = _buffer.indexOf('\n',msgStartInd); // Check if end of message is there
+        msgEndInd = _buffer.indexOf('\n',msgStartInd+1); // Check if end of message is there
         if (msgEndInd == -1) {
             break;
         }
         
-        dollarInd = _buffer.indexOf('$',msgStartInd);
+        dollarInd = _buffer.indexOf('$',msgStartInd+1);
         if (dollarInd != -1 && dollarInd < msgEndInd) { // Check message has no other $ signs
             _buffer = _buffer.substring(dollarInd);
             msgStartInd = 0;
@@ -162,34 +192,80 @@ void NMEAGPS::parseBuffer() {
         }
         
         msgID = _buffer.substring(msgStartInd+1, msgStartInd+6);
-        msg = _buffer.substring(msgStartInd+7,msgEndInd);
+        msg = _buffer.substring(msgStartInd+1,msgEndInd);
+        
+        Serial.println(msg);
         
         if (msgID == String("GPGGA")) {
             parseGPGGA(msg);
-        } else if (msgID == String("GPGSA")) {
-            parseGPGSA(msg);
-        } else if (msgID == String("GPGSV")) {
-            parseGPGSV(msg);
         } else if (msgID == String("GPRMC")) {
             parseGPRMC(msg);
+        } else {
+            _valid = false;
         }
         
         // Trim off found message
+        if (_buffer.length() > msgEndInd+1) {
+            dollarInd = _buffer.indexOf('$',msgEndInd+1);
+            if (dollarInd != -1) {
+                _buffer = _buffer.substring(dollarInd);
+            } else {
+                _buffer = "";
+            }
+        } else {
+            _buffer = "";
+        }
         _buffer = _buffer.substring(msgEndInd+1);
-        
-        _overflow = false;
-    }
-    if (_buffer.indexOf('$') == -1) {
-        _buffer = "";
     }
 }
 
-void NMEAGPS::parseMsg(String &msg, String msgParts[], int nParts) {
+bool NMEAGPS::parseMsg(String &msg, String msgParts[], int nParts) {
+    
+    // Get checkSum value by doing Exclusive OR 
+    int starInd = msg.indexOf('*');
+    
+    char checkSumMsg = 0;
+    if (starInd != -1) {
+        for (int i = 0; i < starInd; i++) {
+            checkSumMsg ^= msg.charAt(i);
+        }
+    } else {
+        return (false);
+    }
+    
+    // Get checkSum characters from message
+    char checkSumTruth;
+    char checkSumStr[3];
+    if (msg.length() > starInd + 2) {
+        checkSumStr[0] = msg.charAt(starInd+1);
+        checkSumStr[1] = msg.charAt(starInd+2);
+        checkSumStr[2] = '\0';
+    } else {
+        return (false);
+    }
+    sscanf(checkSumStr,"%x",&checkSumTruth); // Convert ascii characters to hex value
+    
+    // Compare checkSum values
+    if (checkSumTruth != checkSumMsg) {
+        return (false);
+    }
+    
+    // Parse message
     int commaInd = 0;
     for (int i = 0; i < nParts; i++) {
         commaInd = msg.indexOf(',');
+        if (commaInd == -1 && i != nParts-1) {
+            return (false);
+        }
         msgParts[i] = msg.substring(0,commaInd);
         msg = msg.substring(commaInd+1);
+    }
+    
+    // Make sure message has correct amount of fields
+    if (msg.indexOf(',') != -1) {
+        return (false);
+    } else {
+        return (true);
     }
 }
 
@@ -207,6 +283,7 @@ float NMEAGPS::stof(const String &str) {
 
 void NMEAGPS::parseGPGGA(String &msg) {
     String msgParts[] = {
+        String("GPGGA"),
         String("hhmmss.sss"),
         String("ddmm.mmmm"),
         String("N"),
@@ -223,76 +300,18 @@ void NMEAGPS::parseGPGGA(String &msg) {
         String("0000*00")
     };
     
-    parseMsg(msg, msgParts, 14);
+    // Parse msg
+    if (!parseMsg(msg, msgParts, 15)) { // Exit if not a valid message
+        _valid = false;
+        return;
+    } else {
+        _valid = true;
+    }
     
     // Time
-    _hour = stoi(msgParts[0].substring(0,2));
-    _min = stoi(msgParts[0].substring(2,4));
-    _sec = stof(msgParts[0].substring(4));
-    
-    // Lat
-    int latD = stoi(msgParts[1].substring(0,2));
-    float latM = stof(msgParts[1].substring(2));
-    int latS = msgParts[2] == "N" ? 1 : -1;
-    _lat = latS * (latD + latM/60);
-    
-    // Lon
-    int lonD = stoi(msgParts[3].substring(0,3));
-    float lonM = stof(msgParts[3].substring(3));
-    int lonS = msgParts[4] == "E" ? 1 : -1;
-    _lon = lonS * (lonD + lonM/60);
-    
-    // # Sats
-    _nSats = stoi(msgParts[6]);
-    
-    // HDOP
-    _HDOP = stof(msgParts[7]);
-    
-    // Alt
-    _alt = stof(msgParts[8]);
-    _altUnits = msgParts[9].charAt(0);
-    
-    // Geoid
-    _geoid = stof(msgParts[10]);
-    _geoidUnits = msgParts[11].charAt(0);
-    
-    // Check Sum
-    char checkSum1 = msgParts[13].charAt(5);
-    char checkSum2 = msgParts[13].charAt(6);   
-}
-
-void NMEAGPS::parseGPGSA(String &msg) {
-    // Still need to implement
-}
-
-void NMEAGPS::parseGPGSV(String &msg) {
-    // Still need to implement
-}
-
-void NMEAGPS::parseGPRMC(String &msg) {
-    String msgParts[] = {
-        String("hhmmss.sss"),
-        String("V"),
-        String("ddmm.mmmm"),
-        String("N"),
-        String("dddmm.mmmm"),
-        String("E"),
-        String("000.00"),
-        String("000.00"),
-        String("ddmmyy"),
-        String("E"),
-        String("A*00"),
-    };
-    
-    parseMsg(msg, msgParts, 11);
-    
-    // Time
-    _hour = stoi(msgParts[0].substring(0,2));
-    _min = stoi(msgParts[0].substring(2,4));
-    _sec = stof(msgParts[0].substring(4));
-    
-    // Status
-    _status = msgParts[1] == "A";
+    _hour = stoi(msgParts[1].substring(0,2));
+    _min = stoi(msgParts[1].substring(2,4));
+    _sec = stof(msgParts[1].substring(4));
     
     // Lat
     int latD = stoi(msgParts[2].substring(0,2));
@@ -303,28 +322,84 @@ void NMEAGPS::parseGPRMC(String &msg) {
     // Lon
     int lonD = stoi(msgParts[4].substring(0,3));
     float lonM = stof(msgParts[4].substring(3));
-    int lonS = (msgParts[5] == "E" ? 1 : -1);
+    int lonS = msgParts[5] == "E" ? 1 : -1;
+    _lon = lonS * (lonD + lonM/60);
+    
+    // # Sats
+    _nSats = stoi(msgParts[7]);
+    
+    // HDOP
+    _HDOP = stof(msgParts[8]);
+    
+    // Alt
+    _alt = stof(msgParts[9]);
+    _altUnits = msgParts[10].charAt(0);
+    
+    // Geoid
+    _geoid = stof(msgParts[11]);
+    _geoidUnits = msgParts[12].charAt(0);
+}
+
+void NMEAGPS::parseGPRMC(String &msg) {
+    String msgParts[] = {
+        String("GPRMC"),
+        String("hhmmss.sss"),
+        String("V"),
+        String("ddmm.mmmm"),
+        String("N"),
+        String("dddmm.mmmm"),
+        String("E"),
+        String("000.00"),
+        String("000.00"),
+        String("ddmmyy"),
+        String("00"),
+        String("E"),
+        String("A*00"),
+    };
+    
+    // Parse msg
+    if (!parseMsg(msg, msgParts, 13)) { // Exit if not a valid message
+        _valid = false;
+        return;
+    } else {
+        _valid = true;
+    }
+    
+    // Time
+    _hour = stoi(msgParts[1].substring(0,2));
+    _min = stoi(msgParts[1].substring(2,4));
+    _sec = stof(msgParts[1].substring(4));
+    
+    // Status
+    _status = msgParts[2] == "A";
+    
+    // Lat
+    int latD = stoi(msgParts[3].substring(0,2));
+    float latM = stof(msgParts[3].substring(2));
+    int latS = msgParts[4] == "N" ? 1 : -1;
+    _lat = latS * (latD + latM/60);
+    
+    // Lon
+    int lonD = stoi(msgParts[5].substring(0,3));
+    float lonM = stof(msgParts[5].substring(3));
+    int lonS = (msgParts[6] == "E" ? 1 : -1);
     _lon = lonS * (lonD + lonM/60);
     
     // Speed
-    _speed = stof(msgParts[6]);
+    _speed = stof(msgParts[7]);
     
     // Course
-    _course = stof(msgParts[7]);
+    _course = stof(msgParts[8]);
     
     // Date
-    _day = stoi(msgParts[8].substring(0,2));
-    _month = stoi(msgParts[8].substring(2,4));
-    _year = stoi(msgParts[8].substring(4,6));
+    _day = stoi(msgParts[9].substring(0,2));
+    _month = stoi(msgParts[9].substring(2,4));
+    _year = stoi(msgParts[9].substring(4,6));
     
     // Magnetic variation
-    _magVar = msgParts[9].charAt(0);
+    _magVar = msgParts[10].charAt(0);
     
     // Mode
-    _mode = msgParts[10].charAt(0);
-    
-    // Check Sum
-    char checkSum1 = msgParts[10].charAt(1);
-    char checkSum2 = msgParts[10].charAt(2); 
+    _mode = msgParts[12].charAt(0);
 }
 
