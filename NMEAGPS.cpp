@@ -172,8 +172,9 @@ void NMEAGPS::parseBuffer() {
     String msgID;
     String msg;
     
-    while (_buffer.length() > 1) { // Check if start of message is there
-        msgStartInd = _buffer.indexOf('$');
+    while (_buffer.length() > 1) {
+        
+        msgStartInd = _buffer.indexOf('$'); // Check if start of message is there
         if (msgStartInd == -1) {
             _buffer = "";
             return;
@@ -185,7 +186,7 @@ void NMEAGPS::parseBuffer() {
         }
         
         dollarInd = _buffer.indexOf('$',msgStartInd+1);
-        if (dollarInd != -1 && dollarInd < msgEndInd) { // Check message has no other $ signs
+        if (dollarInd != -1 && dollarInd < msgEndInd) { // Check that message has no other $ chars
             _buffer = _buffer.substring(dollarInd);
             msgStartInd = 0;
             msgEndInd = msgEndInd - dollarInd;
@@ -193,8 +194,6 @@ void NMEAGPS::parseBuffer() {
         
         msgID = _buffer.substring(msgStartInd+1, msgStartInd+6);
         msg = _buffer.substring(msgStartInd+1,msgEndInd);
-        
-        Serial.println(msg);
         
         if (msgID == String("GPGGA")) {
             parseGPGGA(msg);
@@ -221,32 +220,32 @@ void NMEAGPS::parseBuffer() {
 
 bool NMEAGPS::parseMsg(String &msg, String msgParts[], int nParts) {
     
-    // Get checkSum value by doing Exclusive OR 
+    // Get checksum value by doing Exclusive OR 
     int starInd = msg.indexOf('*');
     
-    char checkSumMsg = 0;
+    char checksumMsg = 0;
     if (starInd != -1) {
         for (int i = 0; i < starInd; i++) {
-            checkSumMsg ^= msg.charAt(i);
+            checksumMsg ^= msg.charAt(i);
         }
     } else {
         return (false);
     }
     
-    // Get checkSum characters from message
-    char checkSumTruth;
-    char checkSumStr[3];
+    // Get checksum characters from message
+    char checksumTruth;
+    char checksumStr[3];
     if (msg.length() > starInd + 2) {
-        checkSumStr[0] = msg.charAt(starInd+1);
-        checkSumStr[1] = msg.charAt(starInd+2);
-        checkSumStr[2] = '\0';
+        checksumStr[0] = msg.charAt(starInd+1);
+        checksumStr[1] = msg.charAt(starInd+2);
+        checksumStr[2] = '\0';
     } else {
         return (false);
     }
-    sscanf(checkSumStr,"%x",&checkSumTruth); // Convert ascii characters to hex value
+    sscanf(checksumStr,"%x",&checksumTruth); // Convert ascii characters to hex value
     
-    // Compare checkSum values
-    if (checkSumTruth != checkSumMsg) {
+    // Compare checksum values
+    if (checksumTruth != checksumMsg) {
         return (false);
     }
     
