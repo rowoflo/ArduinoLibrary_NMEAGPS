@@ -7,14 +7,15 @@
     NMEAGPS
  
  DESCRIPTION:
-    description...
+    This class is used to read and parse NMEA GPS data streams.
  
  FILES:
     NMEAGPS.h
     NMEAGPS.cpp
 
  DEPENDENCIES:
-    
+    Arudino.h
+    SoftwareSerial.h
  
  CONSTRUCTORS:
     NMEAGPS();    
@@ -40,7 +41,7 @@
  
  
  VERSIONS:
-    1.0 - 5/28/12 - Rowland O'Flaherty (___WEBSITE___)
+    1.0 - 5/28/12 - Rowland O'Flaherty (rowlandoflaherty.com)
  
  -------------------------------------------------------------------------------
  */
@@ -76,8 +77,7 @@ public:
     // Lifecycle
     //--------------------------------------------------------------------------
     // Constructors
-    NMEAGPS();
-    NMEAGPS(int rxPin, int txPin);
+    NMEAGPS(int rxPin = 2, int txPin = 3);
     NMEAGPS(const SoftwareSerial &gpsSerial);
     
     // Destructor

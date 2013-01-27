@@ -3,7 +3,7 @@
  NMEAGPS.cpp
  NMEAGPS Project
  
- Initially created by Rowland O'Flaherty (___WEBSITE___) on 5/28/12.
+ Initially created by Rowland O'Flaherty (rowlandoflaherty.com) on 5/28/12.
  
  Version 1.0
  -------------------------------------------------------------------------------
@@ -28,16 +28,14 @@
 // Lifecycle
 //------------------------------------------------------------------------------
 // Constructors
-NMEAGPS::NMEAGPS() {
-    NMEAGPS(2, 3);
-}
-
 NMEAGPS::NMEAGPS(int rxPin, int txPin) {
     _rxPin = rxPin;
     _txPin = txPin;
 }
 
 NMEAGPS::NMEAGPS(const SoftwareSerial &gpsSerial) {
+    _rxPin = -1;
+    _txPin = -1;
     _gpsSerial = gpsSerial;
     _gpsSerial.listen();
 }
