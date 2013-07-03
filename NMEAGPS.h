@@ -77,8 +77,8 @@ public:
     // Lifecycle
     //--------------------------------------------------------------------------
     // Constructors
-    NMEAGPS(int rxPin = 2, int txPin = 3);
-    NMEAGPS(const SoftwareSerial &gpsSerial);
+    NMEAGPS(byte rxPin = 2, byte txPin = 3, long baud = 9600); // Arduino Rx (GPS Tx), Arduino Tx (GPS Rx)
+    NMEAGPS(const SoftwareSerial& gpsSerial);
     
     // Destructor
     virtual ~NMEAGPS();
@@ -107,6 +107,9 @@ public:
     
     // Getters
     bool valid() {return _valid;};
+    int year() {return _year;}
+    int month() {return _month;}
+    int day() {return _day;}
     int hour() {return _hour;}
     int minute() {return _min;}
     float second() {return _sec;}
@@ -150,9 +153,9 @@ private:
     //--------------------------------------------------------------------------
     // Private Member Variables
     //--------------------------------------------------------------------------
-    int _rxPin; // Receive pin
-    int _txPin; // Transmit pin
-    static const int _baud = 4800; // BAUD rate
+    byte _rxPin; // Receive pin
+    byte _txPin; // Transmit pin
+    long _baud; // BAUD rate
     
     SoftwareSerial _gpsSerial; // Softserial object for GPS 
     String _buffer; // Receive data buffer
@@ -161,10 +164,10 @@ private:
     
     // GPS Data
     int _year;
-    int _month;
-    int _day;
-    int _hour; // UTC time hour (0 to 23)
-    int _min; // UTC time min (0 to 59)
+    byte _month;
+    byte _day;
+    byte _hour; // UTC time hour (0 to 23)
+    byte _min; // UTC time min (0 to 59)
     float _sec; // UTC time sec (0 to 59)
     
     float _lat; // Latitude in deg (-90 to 90)
@@ -180,7 +183,7 @@ private:
     
     char _magVar; // Magnetic variation E or W
     
-    int _nSats; // Number of satellites used (0 to 12)
+    byte _nSats; // Number of satellites used (0 to 12)
     
     float _PDOP; // Position dilution of precision
     float _HDOP; // Horizontal dilution of precision 

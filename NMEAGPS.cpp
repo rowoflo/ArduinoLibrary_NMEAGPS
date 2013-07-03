@@ -28,9 +28,11 @@
 // Lifecycle
 //------------------------------------------------------------------------------
 // Constructors
-NMEAGPS::NMEAGPS(int rxPin, int txPin) {
+NMEAGPS::NMEAGPS(byte rxPin, byte txPin, long baud) {
     _rxPin = rxPin;
     _txPin = txPin;
+    _baud = baud;
+
 }
 
 NMEAGPS::NMEAGPS(const SoftwareSerial &gpsSerial) {
@@ -72,6 +74,9 @@ void NMEAGPS::copyHelper(const NMEAGPS& srcObj) {
     _gpsSerial = srcObj._gpsSerial;
     _buffer = srcObj._buffer;
     _valid = srcObj._valid;
+    _year = srcObj._year;
+    _month = srcObj._month;
+    _day = srcObj._day;
     _hour = srcObj._hour;
     _min = srcObj._min;
     _sec = srcObj._sec;
@@ -104,6 +109,9 @@ void NMEAGPS::initialize() {
     
     // Initialize private variables
     _valid = false;
+    _year = 0;
+    _month = 0;
+    _day = 0;
     _hour = 0;
     _min = 0;
     _sec = 0;
