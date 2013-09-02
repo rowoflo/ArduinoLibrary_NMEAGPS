@@ -14,15 +14,6 @@
 //------------------------------------------------------------------------------
 #include "NMEAGPS.h"
 
-//------------------------------------------------------------------------------
-// Friends
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-// Friend Overloaded Operators
-//------------------------------------------------------------------------------
-
 
 //------------------------------------------------------------------------------
 // Lifecycle
@@ -155,10 +146,24 @@ bool NMEAGPS::overflow() {
     return _gpsSerial.overflow();
 }
 
-//------------------------------------------------------------------------------
-// Protected Member Functions
-//------------------------------------------------------------------------------
-
+float NMEAGPS::distanceBetween(float lat1, float lon1, float lat2, float lon2, float unitsPerMeter) {
+    float delta = M_PI/180.0*(lon1 - lon2);
+    float sdlong = sin(delta);
+    float cdlong = cos(delta);
+    lat1 = M_PI/180.0*(lat1);
+    lat2 = M_PI/180.0*(lat2);
+    float slat1 = sin(lat1);
+    float clat1 = cos(lat1);
+    float slat2 = sin(lat2);
+    float clat2 = cos(lat2);
+    delta = (clat1 * slat2) - (slat1 * clat2 * cdlong);
+    delta = sq(delta);
+    delta += sq(clat2 * sdlong);
+    delta = sqrt(delta);
+    float denom = (slat1 * slat2) + (clat1 * clat2 * cdlong);
+    delta = atan2(delta, denom);
+    return delta * 6372795 * unitsPerMeter;
+}
 
 //------------------------------------------------------------------------------
 // Private Member Functions
